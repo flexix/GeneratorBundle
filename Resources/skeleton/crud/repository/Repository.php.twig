@@ -1,0 +1,37 @@
+<?php
+
+namespace {{ bundle }}\Repository\{{module|capitalize}}\{{entity}};
+
+{% block use_statements %}
+use  AppBundle\Util\EntityRepository;
+{% endblock use_statements %}
+
+{% block class_definition %}
+class {{ name }} extends EntityRepository
+{% endblock class_definition %}
+{
+{% block class_body %}
+
+public function getConfiguredQueryBuilder()
+{
+
+    $queryBuidler=$this->createQueryBuilder('entity');
+    $queryBuidler->select('entity
+    {%- for fieldname, field in entity_analyzer.getProperties() -%}
+    {%- if  field.type == 'entity' and  field.relation_type in ['oneToOne','manyToOne']  -%}
+    ,{{fieldname}}
+    {%- endif -%}
+    {%- endfor -%}');
+    
+    {%- for fieldname, field in entity_analyzer.getProperties() -%}
+    {%- if  field.type == 'entity' and  field.relation_type in ['oneToOne','manyToOne']  -%}
+    $queryBuidler->leftJoin('entity.{{fieldname}}', '{{fieldname}}');
+    {%- endif -%}
+    {%- endfor -%}
+    
+    return $queryBuidler;        
+}    
+    
+{% endblock class_body %}
+}
+

@@ -1,0 +1,49 @@
+{% block extends %}
+    {{ "{% extends is_sub_request or is_xml_http_request ?  'blank.html.twig':'index.html.twig'  %}" }}
+{% endblock extends %}
+
+{% block body %}
+    {{ "{% block container %}" }}
+    <h1>{{ "{{ '"~translation_prefix~"._get'|trans }}" }} </h1>
+
+    <table>
+        <tbody>
+            {%- for fieldname, field in entity_analyzer.getFields %}
+
+            <tr>
+                <th>{{ "{{ '"~translation_prefix~"."~fieldname|snake|lower~"'|trans }}" }}</th>
+
+                {%- if field.type in ['datetime'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ '|date(\'Y-m-d H:i:s\') }}{% endif %}' }}</td>
+
+                {%- elseif field.type in ['date'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ '|date(\'Y-m-d\') }}{% endif %}' }}</td>
+
+                {%- elseif field.type in ['time'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ '|date(\'H:i:s\') }}{% endif %}' }}</td>
+
+                {%- elseif field.type in ['array','simple_array','json','json_array'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ '|join(\', \') }}{% endif %}' }}</td>
+
+                {%- elseif field.type in ['boolean'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{\'system.yes\'|trans}}{% else %}{{\'system.no\'|trans}}{% endif %}' }}</td>
+
+                {%- else %}
+
+                <td>{{ '{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' }}' }}</td>
+
+                {%- endif %}
+
+            </tr>
+
+            {%- endfor %}
+
+        </tbody>
+    </table>
+    {{ "{% endblock %}" }}
+{% endblock body %}

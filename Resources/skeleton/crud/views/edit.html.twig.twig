@@ -1,0 +1,15 @@
+{% block extends %}
+    {{ "{% extends is_sub_request or is_xml_http_request ?  'blank.html.twig':'index.html.twig'  %}" }}
+{% endblock extends %}
+
+{% block body %}
+    {{ "{% block container %}" }}
+    {{ '{% form_theme form "Form//filter_form.html.twig" %}' }}
+    <h1>{{ "{{ '"~translation_prefix~"._edit'|trans }}" }} </h1>
+
+    {{ '{{ form_start(form) }}' }}
+    {{ '{{ form_widget(form) }}' }}
+    <input type="submit" name="update" value="{{ "{{'system.edit'|trans}}" }}" />
+    {{ '{{ form_end(form) }}' }}
+    {{ "{% endblock %}" }}
+{% endblock body %}

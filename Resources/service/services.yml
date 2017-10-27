@@ -1,0 +1,9 @@
+services:
+    flexix_generator.twig_extension:
+        class: Flexix\GeneratorBundle\Twig\FlexixGeneratorExtension
+        public: true
+        tags:
+            - { name: twig.extension }
+            
+
+            

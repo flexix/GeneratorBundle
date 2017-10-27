@@ -1,0 +1,318 @@
+<?php
+
+namespace {{ bundle }}\Tests\Functional\Model\{{module|capitalize}}\{{entity}};
+
+use TMSolution\GeneratorBundle\Generator\Faker\Populator;
+use Flexix\GeneratorBundle\Util\CommandTestCase;
+use AppBundle\Model\Admin\User\Model;
+
+
+
+/**
+ * Description of ModelTest
+ *
+ * @author Mariusz Piela <mariusz.piela@tmsolution.pl>
+ */
+class SmokeTest extends CommandTestCase {
+
+    protected static $model;
+    protected static $entityManager;
+    protected static $client; 
+    
+    protected static $entityClass='{{entity_analyzer.getEntityClass}}';
+    protected static $username='donatello@tmnt.com';
+    protected static $password='cowabunga';
+    protected static $bundle= '{{bundle}}';
+    
+    public static  function setUpBeforeClass() {
+    
+        self::bootKernel();
+        $drop=self::runCommand(self::$kernel, 'doctrine:schema:drop -f');
+        $update=self::runCommand(self::$kernel, 'doctrine:schema:update -f');
+        $generate=self::runCommand(self::$kernel, sprintf('tmsolution:generate:fixture --bundle %s --dir Test --quantity 3 --silent',self::$bundle));
+        $loadBase=self::runCommand(self::$kernel, sprintf('tmsolution:fixtures:load --fixtures   ./src/%s/DataFixtures/Basic  --silent',self::$bundle));
+        $load=self::runCommand(self::$kernel, sprintf('tmsolution:fixtures:load --fixtures   ./src/%s/DataFixtures/Test  --silent',self::$bundle));
+        self::$entityManager= static::$kernel->getContainer()
+                ->get('doctrine')
+                ->getManager();
+        self::$model = new Model(self::$entityManager);
+    
+     
+    }
+    
+    protected function getEntity()
+    {
+    
+        $generator = \TMSolution\GeneratorBundle\Generator\Faker\Factory::create('{{ locale }}');
+        $customColumnFormatter = array(); 
+        $populator = new Populator($generator, self::$entityManager);
+        $populator->addEntity(self::$entityClass, 1, $customColumnFormatter);
+        $result = $populator->execute(self::$entityManager,false);
+        return $result[0];
+    }
+    
+    protected function printError($crawler){
+
+            $error = $crawler->filter('div.text-exception > h1');
+            $line = $crawler->filter('a.file_link');
+            
+            if ($error->count()) {
+                echo sprintf("\nError: %s, %s\n",$error->text(),$line->text());
+            }
+
+    }
+       
+    protected  function setUp()
+    {
+        self::$client = static::createClient();
+        $route='/login';
+        $crawler = self::$client->request('GET', $route);
+        $form = $crawler->selectButton('_submit')->form(array(
+            '_username'  => self::$username,
+            '_password'  => self::$password
+        ));
+
+        self::$client->submit($form);
+   
+    }
+    
+    protected function  getToken($crawler,$formTypeName)
+    {
+        $extract = $crawler->filter(sprintf('input[name="%s"]',$formTypeName))->extract(array('value'));
+        return  $extract[0];
+    }
+      
+    public function testIndex()
+    {
+        $route='/{{ module }}/{{alias}}/index';
+        $crawler = self::$client->request('GET', $route);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route));
+    }
+{%- if options.insert %}
+
+    public function testNew()
+    {
+        $route='/{{ module }}/{{alias}}/new';
+        $crawler = self::$client->request('GET', $route);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route));
+    }
+  
+    public function testCreate()
+    {
+        $route='/{{ module }}/{{alias}}/new';
+        $crawler = self::$client->request('GET', $route);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route));
+        
+        $entity=$this->getEntity();
+        $form = $crawler->selectButton('create')->form([
+                '{{ module }}_{{ alias }}_insert[_token]'  => $this->getToken($crawler,'{{ module }}_{{ alias }}_insert[_token]'),
+        {%- for fieldname,field in entity_analyzer.insertFields %}
+            {%- if field.getter and field.type not  in {0: 'array',1: 'simple_array',2: 'json',3: 'json_array'} %}
+                {%- if field.type == 'manyToOne' or field.type == 'manyToMany'  %}
+                
+                '{{ module }}_{{ alias }}_insert[{{ fieldname}}]'  => $entity->{{field.getter}}()->getId(),
+                {%- else %}
+                    {%- if field.type in {0: 'date',1: 'date_immutable',2: 'datetime',3: 'datetime_immutable',4: 'datetimetz',5: 'datetimetz_immutable'} %}
+                
+                '{{ module }}_{{ alias }}_insert[{{ fieldname}}]'  => $entity->{{field.getter}}()->format('d.m.Y'),
+                    {%- else %}
+                
+                '{{ module }}_{{ alias }}_insert[{{ fieldname}}]'  => $entity->{{field.getter}}(),
+                    {%- endif %}
+                {%- endif %}
+            {%- endif %}
+        {%- endfor %}    
+        ]);
+
+        self::$client->submit($form);
+        $crawler = self::$client->followRedirect();
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code during inserting %s ",$route));
+    }
+{%- endif %}
+{%- if options.edit %} 
+
+    public function testEdit()
+    {
+        $route='/{{ module }}/{{alias}}/edit/1';
+        $crawler = self::$client->request('GET', $route);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route));    
+    }
+    
+    public function testUpdate()
+    {
+        $route='/{{ module }}/{{alias}}/edit/1';
+        $crawler = self::$client->request('GET', $route);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route)); 
+        
+        $entity=$this->getEntity();
+        $form = $crawler->selectButton('update')->form([
+                '{{ module }}_{{ alias }}_edit[_token]'  => $this->getToken($crawler,'{{ module }}_{{ alias }}_edit[_token]'),
+        {%- for fieldname,field in entity_analyzer.editFields %}
+            {%- if field.getter and field.type not  in {0: 'array',1: 'simple_array',2: 'json',3: 'json_array'} %}
+                {%- if field.type == 'manyToOne' or field.type == 'manyToMany'  %}
+                
+                '{{ module }}_{{ alias }}_edit[{{ fieldname}}]'  => $entity->{{field.getter}}()->getId(),
+                {%- else %}
+                    {%- if field.type in {0: 'date',1: 'date_immutable',2: 'datetime',3: 'datetime_immutable',4: 'datetimetz',5: 'datetimetz_immutable'} %}
+                
+                '{{ module }}_{{ alias }}_edit[{{ fieldname}}]'  => $entity->{{field.getter}}()->format('d.m.Y'),
+                    {%- else %}
+                
+                '{{ module }}_{{ alias }}_edit[{{ fieldname}}]'  => $entity->{{field.getter}}(),
+                    {%- endif %}
+                {%- endif %}
+            {%- endif %}
+        {%- endfor %}    
+        ]);
+
+        self::$client->submit($form);
+        $crawler = self::$client->followRedirect();
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code during update",$route));
+    }
+{%- endif %}
+{%- if options.delete %} 
+
+    public function testDeleteForm()
+    {
+        $route='/{{ module }}/{{alias}}/delete/1';
+        $crawler = self::$client->request('GET', $route);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route)); 
+       
+    }
+    
+    public function testDelete()
+    {
+        $route='/{{ module }}/{{alias}}/delete/1';
+        $crawler = self::$client->request('GET', $route);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route)); 
+        
+        $form = $crawler->selectButton('delete')->form(array(
+            '{{ module }}_{{ alias }}_delete[_token]'  => $this->getToken($crawler,'{{ module }}_{{ alias }}_delete[_token]'),
+        ));
+
+        self::$client->submit($form);
+        $crawler = self::$client->followRedirect();
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code during delete",$route));
+    }
+{%- endif %}
+{%- if options.listView %} 
+    
+    public function testList()
+    {
+        $route='/{{ module }}/{{alias}}/list';
+        $crawler = self::$client->request('GET', $route,[],[],['HTTP_X-Requested-With' => 'XMLHttpRequest']);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route)); 
+       
+    }
+ {%- if options.filter %} 
+    
+    public function testFilter()
+    {
+        $route='/{{ module }}/{{alias}}/filter';
+        $crawler = self::$client->request('GET', $route,[],[],['HTTP_X-Requested-With' => 'XMLHttpRequest']);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route)); 
+        $entity=$this->getEntity();
+        $form = $crawler->selectButton('filter')->form(
+        [
+            '{{ module }}_{{ alias }}_filter' =>[
+        {%- for fieldname,field in entity_analyzer.filterFields %}
+            {%- if field.getter and field.type not  in {0: 'array',1: 'simple_array',2: 'json',3: 'json_array'} %}
+                {%- if field.type == 'manyToOne' or field.type == 'manyToMany'  %}
+                
+                '{{ fieldname }}'  => $entity->{{field.getter}}()->getId(),
+                {%- else %}
+                    {%- if field.type in {0: 'date',1: 'date_immutable'} %}
+                
+                '{{ fieldname }}'
+                    =>[
+                       'left_date'  => $entity->{{field.getter}}()->format('d.m.Y'),
+                       'right_date'  => $entity->{{field.getter}}()->modify('+1 day')->format('d.m.Y')
+                       ],
+                    {%- elseif field.type in {0: 'datetime',1: 'datetime_immutable',2: 'datetimetz',3: 'datetimetz_immutable'} %}
+                
+                '{{ fieldname }}'
+                    =>[
+                       'left_datetime'  => $entity->{{field.getter}}()->format('d.m.Y'),
+                       'right_datetime'  => $entity->{{field.getter}}()->modify('+1 day')->format('d.m.Y')
+                       ],
+                    {%- else %}
+                
+                '{{ fieldname }}'  => $entity->{{field.getter}}(),
+                    {%- endif %}
+                {%- endif %}
+            {%- endif %}
+        {%- endfor %} 
+            ]
+        ]);
+        
+        self::$client->submit($form);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code during delete",$route));
+        
+    }
+        {%- set testfield=null %} 
+        {%- for fieldname,field in entity_analyzer.typeaheadFields if testfield is empty  %}
+                {%- if field.type in {0: 'string'} %}
+                  {%- set testfield={'fieldname':fieldname,'field': field} %}      
+                {%-endif %}
+        {%- endfor %}
+        {%- if testfield is not empty %}    
+        
+    public function testTypeahead()
+    {
+        $route='/{{ module }}/{{alias}}/typeahead/{{testfield.fieldname}}';
+        $entity=$this->getEntity();
+        $crawler = self::$client->request('GET', $route,[
+            '{{ module }}_{{ alias }}_filter' =>[
+        {%- for fieldname,field in entity_analyzer.filterFields %}
+            {%- if field.getter and field.type not  in {0: 'array',1: 'simple_array',2: 'json',3: 'json_array'} %}
+                {%- if field.type == 'manyToOne' or field.type == 'manyToMany'  %}
+                
+                '{{ fieldname }}'  => $entity->{{field.getter}}()->getId(),
+                {%- else %}
+                    {%- if field.type in {0: 'date',1: 'date_immutable'} %}
+                
+                '{{ fieldname }}'
+                    =>[
+                       'left_date'  => $entity->{{field.getter}}()->format('d.m.Y'),
+                       'right_date'  => $entity->{{field.getter}}()->modify('+1 day')->format('d.m.Y')
+                       ],
+                    {%- elseif field.type in {0: 'datetime',1: 'datetime_immutable',2: 'datetimetz',3: 'datetimetz_immutable'} %}
+                
+                '{{ fieldname }}'
+                    =>[
+                       'left_datetime'  => $entity->{{field.getter}}()->format('d.m.Y'),
+                       'right_datetime'  => $entity->{{field.getter}}()->modify('+1 day')->format('d.m.Y')
+                       ],
+                    {%- else %}
+                
+                '{{ fieldname }}'  => $entity->{{field.getter}}(),
+                    {%- endif %}
+                {%- endif %}
+            {%- endif %}
+        {%- endfor %} 
+            ]
+        ],[],['HTTP_X-Requested-With' => 'XMLHttpRequest']);
+        $this->printError($crawler);
+        $this->assertEquals(200, self::$client->getResponse()->getStatusCode(), sprintf("Unexpected HTTP status code for GET %s",$route)); 
+       
+    }
+        {%- endif%}
+    {%- endif %}
+{%- endif %}
+}
+
+
+
+   

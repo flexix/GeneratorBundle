@@ -1,0 +1,8 @@
+{% block body %}
+    
+    {{ '{% form_theme form "Form//filter_form.html.twig" %}' }}
+    {{ '{{ form_start(form) }}' }}
+        {{ '{{ form_widget(form) }}' }}
+        <input type="submit" name='delete' value="{{ "{{'system.delete'|trans}}" }}" />
+    {{ '{{ form_end(form) }}' }}
+{% endblock body %}

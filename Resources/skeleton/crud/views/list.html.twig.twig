@@ -1,0 +1,111 @@
+{% block extends %}
+{{ "{% extends is_sub_request or is_xml_http_request ?  'blank.html.twig':'index.html.twig'  %}" }}
+{% endblock extends %}
+
+{% block body %}
+{{ "{% block container %}" }}
+    <h2>{{ "{{ '"~translation_prefix~"._list'|trans }}" }} </h2>
+
+<div class="count">
+    <h4> {{"{{'system.number_of_elements'|trans}}"}} {{'{{ '~entity_pluralized~'.getTotalItemCount }}'}}</h4>
+</div>
+
+    <table>
+        <thead>
+            <tr>
+            {%- for fieldname, field in entity_analyzer.listFields %}
+            
+            <th {{ '{% if '~entity_pluralized~'.isSorted(\'p.'~fieldname~'\') %} class="sorted"  {% endif %}' }}>
+                {{ '{{ knp_pagination_sortable('~entity_pluralized~',"'~translation_prefix~'.'~fieldname|snake|lower~'"|trans, "p.'~fieldname~'") }}' }}
+            </th>
+            
+            {%- endfor %}
+            
+                <th>{{ "{{'system.actions'|trans}}" }}</th>
+                
+            </tr>
+        </thead>
+        <tbody class='table'>
+        {{ '{% for ' ~ entity_singularized ~ ' in ' ~ entity_pluralized ~ ' %}' }}
+            <tr>
+
+        {%- for fieldname, field in entity_analyzer.listFields %}
+            {%- if loop.first and  options.getView  %}
+
+                <td><a href="{{ "{{ path('get', { 'module': driver.module, 'alias': driver.alias,'"~ entity_analyzer.id ~"': " ~ entity_singularized ~ "."~ entity_analyzer.id ~" }) }}" }}">
+                        
+                        {%- if field.type not  in ['datetime','date','time', 'array','simple_array','json','json_array'] -%}
+                        {{ '{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' }}' }}
+                        {%- else %}
+                        {{ '{{ ' ~ entity_singularized ~ '.' ~ entity_analyzer.id ~ ' }}' }}
+                        {%- endif %}</a></td>
+            {%- elseif field.type in ['datetime'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ '|date(\'Y-m-d H:i:s\') }}{% endif %}' }}</td>
+            
+            {%- elseif field.type in ['date'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ '|date(\'Y-m-d\') }}{% endif %}' }}</td>
+          
+            {%- elseif field.type in ['time'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ '|date(\'H:i:s\') }}{% endif %}' }}</td>
+
+            {%- elseif field.type in [ 'array','simple_array','json','json_array'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ '|join(\', \') }}{% endif %}' }}</td>
+
+            {%- elseif field.type in ['boolean'] %}
+
+                <td>{{ '{% if ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' %}{{\'system.yes\'|trans}}{% else %}{{\'system.no\'|trans}}{% endif %}' }}</td>
+            
+            {%- else %}
+
+                <td>{{ '{{ ' ~ entity_singularized ~ '.' ~ fieldname|replace({'_': ''}) ~ ' }}' }}</td>
+
+            {%- endif %}
+            
+             
+            
+            
+
+            {%- if loop.last %}
+
+                <td>
+                    <ul>
+                        {%- if options.getView %}    
+                        <li>
+                            <a href="{{ "{{ path('get', { 'module': driver.module, 'alias': driver.alias, '"~ entity_analyzer.id ~"': " ~ entity_singularized ~ "."~ entity_analyzer.id ~" }) }}" }}">{{ "{{'system.get'|trans}}" }}</a>
+                        </li>
+                        {%- endif %}
+                        {%- if options.edit %}    
+                         <li>
+                            <a href="{{ "{{ path('edit', {  'module': driver.module, 'alias': driver.alias,'"~ entity_analyzer.id ~"': " ~ entity_singularized ~ "."~ entity_analyzer.id ~" }) }}" }}">{{ "{{'system.edit'|trans}}" }}</a>
+                         </li>
+                        {%- endif %}
+                        {%- if options.delete %}    
+                        <li>
+                           {{  "{{ render(controller('flexix_prototype_controller.entity_controller:deleteAction',{ 'request' : app.request,'module': driver.module, 'alias': driver.alias,'action': 'delete','"~ entity_analyzer.id ~"': " ~ entity_singularized ~ "."~ entity_analyzer.id ~" })) }}" }}
+
+                        </li>
+                        {%- endif %}
+
+                    </ul>
+                </td>
+
+            {%- endif %}
+        {%- endfor %}
+
+            </tr>
+        {{ '{% endfor %}' }}
+        </tbody>
+    </table>
+    {%- if options.pagination %}
+    
+    <div class="navigation">
+       {{ "{{ knp_pagination_render("~entity_pluralized~") }}" }}
+    </div>    
+    {%- endif %}
+
+{{ "{% endblock %}" }}
+{% endblock body %}

@@ -1,0 +1,17 @@
+<?php
+
+namespace {{ bundle }}\Model\{{module|capitalize}}\{{entity}};
+
+{% block use_statements %}
+use Flexix\ModelBundle\Util\PaginatorModel as PaginatorFlexixModel;
+{% endblock use_statements %}
+
+{% block class_definition %}
+class {{ name }} extends PaginatorFlexixModel
+{% endblock class_definition %}
+{
+{% block class_body %}
+   
+{% endblock class_body %}
+}
+

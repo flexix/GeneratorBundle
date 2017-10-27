@@ -1,0 +1,22 @@
+{% block extends %}
+{{ "{% extends is_sub_request or is_xml_http_request ?  'blank.html.twig':'index.html.twig'  %}" }}
+{% endblock extends %}
+{% block body %}
+{{ "{% block container %}" }}
+    <h1>{{ "{{ '"~translation_prefix~"."~entity_pluralized|snake|lower~"'|trans }}" }} </h1>
+ {%- if options.filter %}
+ {{  "{{ render(controller('flexix_prototype_controller.entity_controller:filterAction',{ 'request' : app.request ,'module': driver.module, 'alias': driver.alias,'action': 'filter' })) }}" }}
+ {%- endif %}
+  {% if options.insert -%}
+      
+    <ul>
+        <li>
+               
+            
+            <a href="{{ "{{ path('new',{'module': driver.module, 'alias': driver.alias}) }}" }}"> {{" {{'system.new'|trans}}"}}</a>
+        </li>
+    </ul>
+    {%- endif %}
+ {{  "{{ render(controller('flexix_prototype_controller.entity_controller:listAction',{ 'request' : app.request,'module': driver.module, 'alias': driver.alias,'action': 'list' })) }}" }}
+{{ "{% endblock %}" }}
+{% endblock body %}

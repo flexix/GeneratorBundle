@@ -1,0 +1,17 @@
+<?php
+
+namespace {{ bundle }}\Model\{{module|capitalize}}\{{entity}};
+
+{% block use_statements %}
+use Flexix\ModelBundle\Util\Typeahead as TypeaheadFlexixModel;
+{% endblock use_statements %}
+
+{% block class_definition %}
+class {{ name }} extends TypeaheadFlexixModel
+{% endblock class_definition %}
+{
+{% block class_body %}
+   
+{% endblock class_body %}
+}
+

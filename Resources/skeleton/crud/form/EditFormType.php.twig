@@ -1,0 +1,128 @@
+<?php
+
+namespace {{ bundle }}\Form\Type\{{module|capitalize}}\{{entity|camelize}};
+
+{% block use_statements %}
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Flexix\GeneratorBundle\Transformer\ArrayToJSONStringTransformer;
+{% endblock use_statements %}
+
+{% block class_definition %}
+class {{ name }} extends AbstractType
+{% endblock class_definition %}
+{
+{% block class_body %}
+    {%- if entity_analyzer.getInsertFields|length > 0 %}
+   /**
+     * {@inheritdoc}
+     */
+    public function buildForm(FormBuilderInterface $builder, array $options)
+    {
+        $builder
+            {%- for fieldname,field in entity_analyzer.getInsertFields -%}
+            
+            {%- if field.type in {0: 'date',1: 'date_immutable'}%}                     
+                 
+            ->add('{{ fieldname }}',null, 
+                        ['label' => '{{translation_prefix}}.{{fieldname|snake|lower}}',
+                        'widget' => 'single_text',
+                        'format' => 'dd.MM.yyyy'
+                        'constraints' => [ 
+                        new Constraints\DateTime(),
+                        {%- if field.nullable is defined and  field.nullable == false -%}
+                        new Constraints\NotBlank()
+                        {%- endif -%}]
+                        ])
+
+            {%- elseif field.type in {0: 'datetime',1: 'datetime_immutable',2: 'datetimetz',3: 'datetimetz_immutable'} %}
+            
+            ->add('{{ fieldname }}', DateTimeType::class, 
+                        ['label' => '{{translation_prefix}}.{{fieldname|snake|lower}}',
+                        'widget' => 'single_text',
+                        'format' => 'dd.MM.yyyy',
+                        'constraints' => [ 
+                        new Constraints\DateTime()
+                        {%- if field.nullable is defined and field.nullable == false -%}
+                        ,new Constraints\NotBlank()
+                        {%- endif -%}]
+                        ])
+                        
+            {%- elseif field.type == 'entity' %}
+            
+                ->add('{{ fieldname }}',EntityType::class, [
+                    'label' => '{{translation_prefix}}.{{fieldname|snake|lower}}', 
+                    'class'=>'{{field.fullNamespace}}',
+                    'query_builder' => function($repository) {
+                     $qb = $repository->createQueryBuilder('u');
+                     $qb->setMaxResults(100);
+                     return $qb;},
+                     'empty_data' => NULL,
+                     'required' => false,
+                     'choice_translation_domain' => true,
+                     'constraints' => [
+                     {%- if  field.nullable is defined and field.nullable == false -%}
+                        new Constraints\NotBlank()
+                     {%- endif -%}
+                     ]
+                    ])
+                        
+             {%- else %}
+            
+            ->add('{{ fieldname }}',null,  ['label' => '{{translation_prefix}}.{{fieldname|snake|lower}}','constraints' => [
+                     {%- if  field.nullable is defined and field.nullable == false -%}
+                        new Constraints\NotBlank()
+                     {%- endif -%}
+                     ]])
+            {%- endif %}  
+            
+            {%- endfor %};
+            
+            
+            {%- for fieldname,field in entity_analyzer.getInsertFields -%}
+                {%- if field.type in ['array','simple_array','json','json_array'] %}
+            
+            $builder->get('{{ fieldname }}')
+            ->addModelTransformer(new ArrayToJSONStringTransformer());
+                {%- endif %}
+            {%- endfor %};
+            
+    }
+    {% endif %}
+
+    /**
+     * {@inheritdoc}
+     */
+    public function configureOptions(OptionsResolver $resolver)
+    {
+        $resolver->setDefaults(array(
+            'data_class' => '{{ entity_class }}',
+            'attr' => array('novalidate' => 'novalidate')
+        ));
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getBlockPrefix()
+    {
+        return '{{ module }}_{{ alias|snake }}_edit';
+    }
+
+{# BC with Symfony 2.7 #}
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getName()
+    {
+        return $this->getBlockPrefix();
+    }
+
+
+{% endblock class_body %}
+}
