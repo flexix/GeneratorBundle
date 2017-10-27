@@ -6,8 +6,8 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Fabien Potencier",
-            "email": "fabien@symfony.com"
+            "name": "Mariusz Piela",
+            "email": "mariusz.piela@gmail.com"
         }
     ],
     "require": {
