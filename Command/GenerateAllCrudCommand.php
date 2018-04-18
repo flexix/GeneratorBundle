@@ -39,6 +39,7 @@ class GenerateAllCrudCommand extends GenerateDoctrineCommand {
                 ->setDefinition(array(
                     new InputArgument('module', InputArgument::REQUIRED, 'Module'),
                     new InputArgument('bundle', InputArgument::REQUIRED, 'Bundle'),
+                    new InputArgument('alias', InputArgument::OPTIONAL, 'Alias'),
                     new InputOption('translation', '', InputOption::VALUE_OPTIONAL, 'additional translation language code'),
                 ))
                 ->setHelp(<<<EOT
@@ -72,9 +73,10 @@ EOT
 
         $module = $input->getArgument('module');
         $bundle = $input->getArgument('bundle');
+        $alias = $input->getArgument('alias');
         $options['translation'] = $input->getOption('translation');
 
-        $this->generate( $module, $bundle, $options,$output);//->generate();
+        $this->generate( $module, $bundle,$alias, $options,$output);//->generate();
         $questionHelper->writeGeneratorSummary($output, array());
     }
 
@@ -83,6 +85,27 @@ EOT
 //        
 //    }
     
+    protected function filterByAlias($classes,$alias)
+    {
+        
+        if($alias)
+        {
+             foreach ($classes as $map) {
+                
+                if($map['alias']==$alias)
+                {
+                    $classes=[];
+                    $classes[]=$map;                    
+                }
+            }
+            return $classes;
+        }
+        else
+        {
+            return $classes;
+        }
+        
+    }
     
     protected function snakeCase($text) {
    
@@ -90,7 +113,7 @@ EOT
         return ltrim(strtolower($snakeCase), '_');
     }
 
-    protected function generate( $module, $bundle, $options,$output) {
+    protected function generate( $module, $bundle,$alias=null, $options,$output) {
 
         if (null == $this->generator) {
 
@@ -113,6 +136,7 @@ EOT
                 
             }
             
+            $classes=$this->filterByAlias($classes,$alias);
             
             foreach ($classes as $map) {
 
