@@ -428,7 +428,8 @@ class DoctrineCrudGenerator extends Generator
     {
 
         if (file_exists($filename)) {
-            if ($this->checksumController->checkChecksum($filename)) {
+            
+            if ($this->checksumController->checkChecksum($filename,$content)) {
                 
                 $this->checksumController->addFile($filename);
                 
